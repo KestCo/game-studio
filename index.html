@@ -15,7 +15,7 @@
         </div>
         <div class="studio-status">
           <span>3 games</span>
-          <strong>Analytics bridge next</strong>
+          <strong>Studio bridge live</strong>
         </div>
       </header>
 
@@ -30,7 +30,11 @@
         </article>
         <article>
           <span>Analytics</span>
-          <strong>Supabase pending</strong>
+          <strong>Supabase live</strong>
+        </article>
+        <article>
+          <span>Drafts</span>
+          <strong>Shared saves active</strong>
         </article>
       </section>
 
@@ -67,6 +71,18 @@
                 <span id="dataSource" class="data-source"></span>
               </div>
               <div id="metricsGrid" class="metrics-grid"></div>
+            </section>
+
+            <section class="panel drafts-panel" aria-labelledby="draftsTitle">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Drafts</span>
+                  <h3 id="draftsTitle">Editor workflow status</h3>
+                </div>
+                <span id="draftSource" class="data-source"></span>
+              </div>
+              <div id="draftSummary" class="draft-summary"></div>
+              <div id="draftList" class="draft-list"></div>
             </section>
 
             <section class="panel" aria-labelledby="readyTitle">

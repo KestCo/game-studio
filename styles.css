@@ -109,7 +109,7 @@ h3 {
 
 .studio-overview {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -297,7 +297,7 @@ h3 {
 
 .detail-sections {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -317,6 +317,111 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.drafts-panel {
+  display: grid;
+  align-content: start;
+}
+
+.draft-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.draft-stat,
+.draft-row {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.draft-stat {
+  display: grid;
+  gap: 7px;
+  min-height: 96px;
+  padding: 14px;
+}
+
+.draft-stat.wide {
+  grid-column: 1 / -1;
+}
+
+.draft-stat span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.draft-stat strong {
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.draft-stat p,
+.draft-empty,
+.draft-row p,
+.draft-row span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.draft-list {
+  display: grid;
+  gap: 10px;
+}
+
+.draft-empty {
+  border: 1px dashed #cfd8e5;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 14px;
+}
+
+.draft-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+}
+
+.draft-row strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.draft-row span {
+  display: block;
+  margin-top: 4px;
+}
+
+.draft-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid #cfd8e5;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 8px 11px;
+  font-size: 0.86rem;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.draft-link:hover,
+.draft-link:focus-visible {
+  border-color: rgba(215, 175, 99, 0.7);
+  background: #fff8e8;
+  outline: none;
 }
 
 .metric-card {
@@ -470,6 +575,15 @@ h3 {
   }
 
   .studio-action {
+    width: 100%;
+  }
+
+  .draft-summary,
+  .draft-row {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-link {
     width: 100%;
   }
 }

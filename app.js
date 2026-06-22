@@ -3,15 +3,15 @@ const games = [
     id: "word-architect",
     name: "Word Architect",
     logo: "assets/word-architect-logo.png",
-    status: "Local editor ready",
-    statusTone: "needs-url",
+    status: "Live editor ready",
+    statusTone: "ready",
     summary:
       "A daily word-grouping game built around meaning, connection, insight, and Word Lens vocabulary.",
-    dataSource: "Waiting for shared analytics",
+    dataSource: "Live analytics connected",
     links: [
-      { label: "Open Local Editor", url: "http://localhost:3001/editor", primary: true },
-      { label: "Open Local Game", url: "http://localhost:3001/", primary: false },
-      { label: "Live URL Needed", url: "", disabled: true }
+      { label: "Open Editor", url: "https://word-architect.vercel.app/editor", primary: true },
+      { label: "Open Live Game", url: "https://word-architect.vercel.app/", primary: false },
+      { label: "Open Local Editor", url: "http://localhost:3001/editor", primary: false }
     ],
     metrics: [
       { label: "Daily Plays", value: "--", note: "Connect play_started events." },
@@ -22,8 +22,9 @@ const games = [
     readiness: [
       { label: "Editor route mapped", detail: "/editor is ready for local review.", ready: true },
       { label: "Week inventory active", detail: "Daily puzzle library is in the game project.", ready: true },
-      { label: "Analytics events", detail: "Needs Supabase event capture.", ready: false },
-      { label: "Public link confirmed", detail: "Add the production URL once final.", ready: false }
+      { label: "Analytics events", detail: "Supabase event capture is live.", ready: true },
+      { label: "Shared draft saving", detail: "Editor branches save to Supabase.", ready: true },
+      { label: "Public link confirmed", detail: "Production URL is mapped.", ready: true }
     ],
     workflow: [
       "Review the daily puzzle in the editor.",
@@ -55,7 +56,8 @@ const games = [
       { label: "Live game link works", detail: "Production game is mapped.", ready: true },
       { label: "Editor route mapped", detail: "?editor=1 opens the backstage editor.", ready: true },
       { label: "Readiness checklist", detail: "Editor includes final game checks.", ready: true },
-      { label: "Analytics events", detail: "Needs Supabase event capture.", ready: false }
+      { label: "Analytics events", detail: "Supabase event capture is live.", ready: true },
+      { label: "Shared draft saving", detail: "Editor branches save to Supabase.", ready: true }
     ],
     workflow: [
       "Choose week and day in the editor.",
@@ -105,6 +107,9 @@ const gameSummary = document.querySelector("#gameSummary");
 const actionBar = document.querySelector("#actionBar");
 const metricsGrid = document.querySelector("#metricsGrid");
 const dataSource = document.querySelector("#dataSource");
+const draftSource = document.querySelector("#draftSource");
+const draftSummary = document.querySelector("#draftSummary");
+const draftList = document.querySelector("#draftList");
 const readyList = document.querySelector("#readyList");
 const readyCount = document.querySelector("#readyCount");
 const workflowList = document.querySelector("#workflowList");
@@ -112,6 +117,24 @@ const workflowList = document.querySelector("#workflowList");
 let activeGameId = localStorage.getItem("studioActiveGame") || games[0].id;
 let analyticsRows = [];
 let analyticsConfigured = false;
+let draftRowsByGame = {
+  "word-architect": [],
+  "top-tier": []
+};
+let draftsConfigured = false;
+
+const draftSources = {
+  "word-architect": {
+    table: "word_architect_drafts",
+    select: "draft_id,source_game_id,week,day,title,status,editor_name,publication,updated_at,submitted_at",
+    editorUrl: "https://word-architect.vercel.app/editor"
+  },
+  "top-tier": {
+    table: "top_tier_drafts",
+    select: "draft_id,source_game_id,week,day,label,status,editor_name,news_organization,updated_at,submitted_at",
+    editorUrl: "https://top-tier-game.vercel.app/?editor=1"
+  }
+};
 
 function escapeHtml(value) {
   return String(value)
@@ -128,6 +151,62 @@ function activeGame() {
 
 function analyticsConfig() {
   return window.KestCoStudioAnalyticsConfig || {};
+}
+
+function draftConfig() {
+  const config = analyticsConfig();
+  const supabaseUrl = String(config.supabaseUrl || "").replace(/\/$/, "");
+  const supabaseAnonKey = config.supabaseAnonKey || "";
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  return {
+    supabaseUrl,
+    supabaseAnonKey
+  };
+}
+
+function formatDateTime(value) {
+  if (!value) return "No timestamp";
+
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function draftStatusLabel(status) {
+  if (status === "submitted") return "Submitted for review";
+  if (status === "approved") return "Approved";
+  return "In progress";
+}
+
+function draftEditorLine(row) {
+  const editor = row.editor_name || "No editor name";
+  const organization = row.news_organization || row.publication || "";
+  return organization ? `${editor}, ${organization}` : editor;
+}
+
+function draftTitle(row) {
+  if (row.title) return row.title;
+  if (row.week && row.day) return `Week ${row.week}, Day ${row.day}`;
+  if (row.label) return `${row.label} - Day ${row.day || "?"}`;
+  return row.source_game_id || "Untitled draft";
+}
+
+function draftEditorUrl(game, row) {
+  const source = draftSources[game.id];
+  if (!source) return "";
+
+  if (game.id === "top-tier" && row.week && row.day) {
+    return `${source.editorUrl}&week=${encodeURIComponent(row.week)}&day=${encodeURIComponent(row.day)}`;
+  }
+
+  return source.editorUrl;
 }
 
 function rowsFor(gameId, eventName) {
@@ -272,6 +351,74 @@ function renderMetrics(game) {
     .join("");
 }
 
+function renderDrafts(game) {
+  const source = draftSources[game.id];
+  const rows = [...(draftRowsByGame[game.id] || [])].sort(
+    (a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0)
+  );
+  const inProgress = rows.filter((row) => !row.status || row.status === "draft").length;
+  const submitted = rows.filter((row) => row.status === "submitted").length;
+  const latest = rows[0];
+
+  if (!source) {
+    draftSource.textContent = "No draft table yet";
+    draftSummary.innerHTML = `
+      <article class="draft-stat">
+        <span>Draft Workflow</span>
+        <strong>Not connected</strong>
+        <p>Your Story uses the writer portal for now.</p>
+      </article>
+    `;
+    draftList.innerHTML = `
+      <p class="draft-empty">Writer draft saving can come after the story template workflow settles.</p>
+    `;
+    return;
+  }
+
+  draftSource.textContent = draftsConfigured ? "Live drafts connected" : "Loading drafts";
+  draftSummary.innerHTML = `
+    <article class="draft-stat">
+      <span>In Progress</span>
+      <strong>${inProgress}</strong>
+      <p>Saved branches still being edited.</p>
+    </article>
+    <article class="draft-stat">
+      <span>Submitted</span>
+      <strong>${submitted}</strong>
+      <p>Branches marked ready for review.</p>
+    </article>
+    <article class="draft-stat wide">
+      <span>Latest Activity</span>
+      <strong>${latest ? escapeHtml(formatDateTime(latest.updated_at)) : "None yet"}</strong>
+      <p>${latest ? escapeHtml(draftTitle(latest)) : "No shared drafts have been saved."}</p>
+    </article>
+  `;
+
+  if (!rows.length) {
+    draftList.innerHTML = `
+      <p class="draft-empty">No saved draft branches yet. Once an editor saves, the branch will appear here.</p>
+    `;
+    return;
+  }
+
+  draftList.innerHTML = rows
+    .slice(0, 5)
+    .map((row) => {
+      const editorUrl = draftEditorUrl(game, row);
+      return `
+        <article class="draft-row">
+          <div>
+            <strong>${escapeHtml(draftTitle(row))}</strong>
+            <p>${escapeHtml(draftStatusLabel(row.status))} - ${escapeHtml(draftEditorLine(row))}</p>
+            <span>Last saved ${escapeHtml(formatDateTime(row.updated_at))}</span>
+          </div>
+          <a class="draft-link" href="${escapeHtml(editorUrl)}" target="_blank" rel="noreferrer">Open Editor</a>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderReadyBoard(game) {
   const ready = game.readiness.filter((item) => item.ready).length;
   readyCount.textContent = `${ready} of ${game.readiness.length} ready`;
@@ -317,6 +464,7 @@ function renderDetail() {
   dataSource.textContent = analyticsConfigured ? "Live analytics connected" : game.dataSource;
   renderActions(game);
   renderMetrics(game);
+  renderDrafts(game);
   renderReadyBoard(game);
   renderWorkflow(game);
 }
@@ -363,3 +511,46 @@ async function loadAnalyticsRows() {
 }
 
 loadAnalyticsRows();
+
+async function loadDraftRows() {
+  const config = draftConfig();
+  if (!config) {
+    return;
+  }
+
+  try {
+    const entries = await Promise.all(
+      Object.entries(draftSources).map(async ([gameId, source]) => {
+        const query = [
+          `select=${source.select}`,
+          "order=updated_at.desc",
+          "limit=20"
+        ].join("&");
+        const response = await fetch(
+          `${config.supabaseUrl}/rest/v1/${source.table}?${query}`,
+          {
+            headers: {
+              apikey: config.supabaseAnonKey,
+              Authorization: `Bearer ${config.supabaseAnonKey}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          return [gameId, []];
+        }
+
+        const rows = await response.json();
+        return [gameId, Array.isArray(rows) ? rows : []];
+      })
+    );
+
+    draftRowsByGame = Object.fromEntries(entries);
+    draftsConfigured = true;
+    renderDetail();
+  } catch (_error) {
+    draftsConfigured = false;
+  }
+}
+
+loadDraftRows();

@@ -9,6 +9,7 @@ A first shared hub for Word Architect, Top Tier, and Your Story.
 - Analytics placeholders for the future Supabase bridge
 - Supabase-ready analytics reader for shared game stats
 - Supabase schema for Top Tier and Word Architect editor draft saving
+- Live draft status summaries for Top Tier and Word Architect
 - Readiness board per game
 - Direct links to editor/writer portals and live games
 
