@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KestCo Game Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="studio-shell">
+      <header class="studio-header">
+        <div>
+          <p class="eyebrow">KestCo Game Studio</p>
+          <h1>Game command center</h1>
+        </div>
+        <div class="studio-status">
+          <span>3 games</span>
+          <strong>Analytics bridge next</strong>
+        </div>
+      </header>
+
+      <section class="studio-overview" aria-label="Suite overview">
+        <article>
+          <span>Publishing</span>
+          <strong>2 live links ready</strong>
+        </article>
+        <article>
+          <span>Editors</span>
+          <strong>3 portals mapped</strong>
+        </article>
+        <article>
+          <span>Analytics</span>
+          <strong>Supabase pending</strong>
+        </article>
+      </section>
+
+      <section class="studio-grid">
+        <aside class="game-rail" aria-label="Games">
+          <div class="rail-heading">
+            <span class="eyebrow">Choose Game</span>
+            <p>Open the right workspace for the job.</p>
+          </div>
+          <div id="gameList" class="game-list"></div>
+        </aside>
+
+        <section class="game-detail" aria-live="polite">
+          <div class="detail-hero">
+            <div class="logo-frame">
+              <img id="gameLogo" alt="" />
+            </div>
+            <div class="detail-copy">
+              <span id="gameStatus" class="status-pill"></span>
+              <h2 id="gameName"></h2>
+              <p id="gameSummary"></p>
+            </div>
+          </div>
+
+          <div class="action-bar" id="actionBar"></div>
+
+          <div class="detail-sections">
+            <section class="panel" aria-labelledby="analyticsTitle">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Analytics</span>
+                  <h3 id="analyticsTitle">Game health snapshot</h3>
+                </div>
+                <span id="dataSource" class="data-source"></span>
+              </div>
+              <div id="metricsGrid" class="metrics-grid"></div>
+            </section>
+
+            <section class="panel" aria-labelledby="readyTitle">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Readiness</span>
+                  <h3 id="readyTitle">Today board</h3>
+                </div>
+                <span id="readyCount" class="data-source"></span>
+              </div>
+              <div id="readyList" class="ready-list"></div>
+            </section>
+          </div>
+
+          <section class="panel workflow-panel" aria-labelledby="workflowTitle">
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">Workflow</span>
+                <h3 id="workflowTitle">Best next moves</h3>
+              </div>
+            </div>
+            <div id="workflowList" class="workflow-list"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="studio-config.js"></script>
+    <script src="studio-analytics.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
