@@ -122,6 +122,7 @@ let draftRowsByGame = {
   "top-tier": []
 };
 let draftsConfigured = false;
+let draftStatusUpdatingKey = "";
 
 const draftSources = {
   "word-architect": {
@@ -133,6 +134,25 @@ const draftSources = {
     table: "top_tier_drafts",
     select: "draft_id,source_game_id,week,day,label,status,editor_name,news_organization,updated_at,submitted_at",
     editorUrl: "https://top-tier-game.vercel.app/?editor=1"
+  }
+};
+
+const draftWorkflowStates = {
+  draft: {
+    label: "Edited Version",
+    detail: "The editor is still shaping this draft."
+  },
+  needs_revision: {
+    label: "Corrections Needed",
+    detail: "This draft was sent back for another edit."
+  },
+  submitted: {
+    label: "Final Review",
+    detail: "This draft is ready for Brad's review."
+  },
+  approved: {
+    label: "Approved",
+    detail: "This draft has been approved."
   }
 };
 
@@ -180,9 +200,23 @@ function formatDateTime(value) {
 }
 
 function draftStatusLabel(status) {
-  if (status === "submitted") return "Submitted for review";
-  if (status === "approved") return "Approved";
-  return "In progress";
+  return draftWorkflowStates[normalizeDraftStatus(status)].label;
+}
+
+function draftStatusDetail(status) {
+  return draftWorkflowStates[normalizeDraftStatus(status)].detail;
+}
+
+function normalizeDraftStatus(status) {
+  if (status === "submitted" || status === "approved" || status === "needs_revision") {
+    return status;
+  }
+
+  return "draft";
+}
+
+function draftStatusClass(status) {
+  return normalizeDraftStatus(status).replace("_", "-");
 }
 
 function draftEditorLine(row) {
@@ -207,6 +241,10 @@ function draftEditorUrl(game, row) {
   }
 
   return source.editorUrl;
+}
+
+function draftRowKey(gameId, draftId) {
+  return `${gameId}:${draftId}`;
 }
 
 function rowsFor(gameId, eventName) {
@@ -356,7 +394,10 @@ function renderDrafts(game) {
   const rows = [...(draftRowsByGame[game.id] || [])].sort(
     (a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0)
   );
-  const inProgress = rows.filter((row) => !row.status || row.status === "draft").length;
+  const edited = rows.filter((row) => normalizeDraftStatus(row.status) === "draft").length;
+  const needsRevision = rows.filter(
+    (row) => normalizeDraftStatus(row.status) === "needs_revision"
+  ).length;
   const submitted = rows.filter((row) => row.status === "submitted").length;
   const latest = rows[0];
 
@@ -378,14 +419,19 @@ function renderDrafts(game) {
   draftSource.textContent = draftsConfigured ? "Live drafts connected" : "Loading drafts";
   draftSummary.innerHTML = `
     <article class="draft-stat">
-      <span>In Progress</span>
-      <strong>${inProgress}</strong>
-      <p>Saved branches still being edited.</p>
+      <span>Edited Version</span>
+      <strong>${edited}</strong>
+      <p>Saved branches still being shaped.</p>
     </article>
     <article class="draft-stat">
-      <span>Submitted</span>
+      <span>Corrections Needed</span>
+      <strong>${needsRevision}</strong>
+      <p>Drafts sent back for another pass.</p>
+    </article>
+    <article class="draft-stat">
+      <span>Final Review</span>
       <strong>${submitted}</strong>
-      <p>Branches marked ready for review.</p>
+      <p>Drafts ready for Brad's review.</p>
     </article>
     <article class="draft-stat wide">
       <span>Latest Activity</span>
@@ -405,18 +451,111 @@ function renderDrafts(game) {
     .slice(0, 5)
     .map((row) => {
       const editorUrl = draftEditorUrl(game, row);
+      const status = normalizeDraftStatus(row.status);
+      const rowKey = draftRowKey(game.id, row.draft_id);
+      const updating = draftStatusUpdatingKey === rowKey;
+      const primaryAction =
+        status === "submitted"
+          ? {
+              label: "Send Back",
+              nextStatus: "needs_revision"
+            }
+          : {
+              label: "Move to Final Review",
+              nextStatus: "submitted"
+            };
       return `
-        <article class="draft-row">
+        <article class="draft-row ${escapeHtml(draftStatusClass(status))}">
           <div>
             <strong>${escapeHtml(draftTitle(row))}</strong>
-            <p>${escapeHtml(draftStatusLabel(row.status))} - ${escapeHtml(draftEditorLine(row))}</p>
+            <p>
+              <span class="draft-state-pill">${escapeHtml(draftStatusLabel(status))}</span>
+              ${escapeHtml(draftEditorLine(row))}
+            </p>
             <span>Last saved ${escapeHtml(formatDateTime(row.updated_at))}</span>
+            <span>${escapeHtml(draftStatusDetail(status))}</span>
           </div>
-          <a class="draft-link" href="${escapeHtml(editorUrl)}" target="_blank" rel="noreferrer">Open Editor</a>
+          <div class="draft-row-actions">
+            <a class="draft-link" href="${escapeHtml(editorUrl)}" target="_blank" rel="noreferrer">Open Editor</a>
+            <button
+              class="draft-state-button"
+              type="button"
+              data-game-id="${escapeHtml(game.id)}"
+              data-draft-id="${escapeHtml(row.draft_id)}"
+              data-next-status="${escapeHtml(primaryAction.nextStatus)}"
+              ${updating ? "disabled" : ""}
+            >
+              ${updating ? "Updating..." : escapeHtml(primaryAction.label)}
+            </button>
+          </div>
         </article>
       `;
     })
     .join("");
+
+  draftList.querySelectorAll(".draft-state-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateDraftStatus(
+        button.dataset.gameId,
+        button.dataset.draftId,
+        button.dataset.nextStatus
+      );
+    });
+  });
+}
+
+async function updateDraftStatus(gameId, draftId, nextStatus) {
+  const config = draftConfig();
+  const source = draftSources[gameId];
+  if (!config || !source || !draftId || !nextStatus) return;
+
+  const rowKey = draftRowKey(gameId, draftId);
+  draftStatusUpdatingKey = rowKey;
+  renderDetail();
+
+  const now = new Date().toISOString();
+  const payload = {
+    status: nextStatus,
+    updated_at: now
+  };
+
+  if (nextStatus === "submitted") {
+    payload.submitted_at = now;
+  }
+
+  try {
+    const response = await fetch(
+      `${config.supabaseUrl}/rest/v1/${source.table}?draft_id=eq.${encodeURIComponent(draftId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: config.supabaseAnonKey,
+          Authorization: `Bearer ${config.supabaseAnonKey}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Draft status update failed with ${response.status}`);
+    }
+
+    const updatedRows = await response.json();
+    const updatedRow = Array.isArray(updatedRows) ? updatedRows[0] : null;
+
+    if (updatedRow) {
+      draftRowsByGame[gameId] = (draftRowsByGame[gameId] || []).map((row) =>
+        row.draft_id === draftId ? { ...row, ...updatedRow } : row
+      );
+    }
+  } catch (error) {
+    console.warn("Game Studio could not update draft status.", error);
+  } finally {
+    draftStatusUpdatingKey = "";
+    renderDetail();
+  }
 }
 
 function renderReadyBoard(game) {

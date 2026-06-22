@@ -22,6 +22,10 @@ A first shared hub for Word Architect, Top Tier, and Your Story.
 
 The event table stores counts and behavior signals. The draft tables store editor-created Top Tier and Word Architect puzzle drafts. They should not store player-written story text.
 
+## Editorial states
+
+Drafts move from the original puzzle into an edited version, then into final review. Game Studio can send a final-review draft back to corrections needed so an editor can revise it and submit it again.
+
 ## Next step
 
 Deploy this portal and add the same Supabase URL/key to the game projects so the dashboard becomes live.
