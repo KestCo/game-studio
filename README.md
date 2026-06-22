@@ -24,7 +24,7 @@ The event table stores counts and behavior signals. The draft tables store edito
 
 ## Editorial states
 
-Drafts move from the original puzzle into an edited version, then into final review. Game Studio can send a final-review draft back to corrections needed so an editor can revise it and submit it again.
+Drafts move from the original puzzle into an edited version, then into final review, publication ready, and published. Game Studio can send a final-review draft back to corrections needed so an editor can revise it and submit it again.
 
 ## Next step
 

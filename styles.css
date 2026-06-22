@@ -396,6 +396,16 @@ h3 {
   background: #f4fbf6;
 }
 
+.draft-row.publication-ready {
+  border-color: rgba(215, 175, 99, 0.36);
+  background: #fffaf0;
+}
+
+.draft-row.published {
+  border-color: rgba(111, 135, 159, 0.4);
+  background: #f4f8fb;
+}
+
 .draft-row.needs-revision {
   border-color: rgba(180, 71, 71, 0.24);
   background: #fff8f3;
@@ -434,6 +444,16 @@ h3 {
   color: #a2412e;
 }
 
+.draft-row.publication-ready .draft-state-pill {
+  background: #fff0bf;
+  color: #806019;
+}
+
+.draft-row.published .draft-state-pill {
+  background: #e9f0f7;
+  color: #496177;
+}
+
 .draft-row-actions {
   display: grid;
   gap: 8px;
@@ -470,6 +490,12 @@ h3 {
   border-color: var(--ink);
   color: #fff;
   cursor: pointer;
+}
+
+.draft-state-button.secondary {
+  background: #fff;
+  border-color: #cfd8e5;
+  color: var(--ink);
 }
 
 .draft-state-button:hover,

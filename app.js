@@ -150,6 +150,14 @@ const draftWorkflowStates = {
     label: "Final Review",
     detail: "This draft is ready for Brad's review."
   },
+  publication_ready: {
+    label: "Publication Ready",
+    detail: "This draft is approved and waiting to be published."
+  },
+  published: {
+    label: "Published",
+    detail: "This draft has been marked as published."
+  },
   approved: {
     label: "Approved",
     detail: "This draft has been approved."
@@ -208,7 +216,13 @@ function draftStatusDetail(status) {
 }
 
 function normalizeDraftStatus(status) {
-  if (status === "submitted" || status === "approved" || status === "needs_revision") {
+  if (
+    status === "submitted" ||
+    status === "publication_ready" ||
+    status === "published" ||
+    status === "approved" ||
+    status === "needs_revision"
+  ) {
     return status;
   }
 
@@ -245,6 +259,31 @@ function draftEditorUrl(game, row) {
 
 function draftRowKey(gameId, draftId) {
   return `${gameId}:${draftId}`;
+}
+
+function nextDraftAction(status) {
+  if (status === "draft" || status === "needs_revision") {
+    return {
+      label: "Move to Final Review",
+      nextStatus: "submitted"
+    };
+  }
+
+  if (status === "submitted") {
+    return {
+      label: "Approve for Publication",
+      nextStatus: "publication_ready"
+    };
+  }
+
+  if (status === "publication_ready") {
+    return {
+      label: "Mark Published",
+      nextStatus: "published"
+    };
+  }
+
+  return null;
 }
 
 function rowsFor(gameId, eventName) {
@@ -398,7 +437,15 @@ function renderDrafts(game) {
   const needsRevision = rows.filter(
     (row) => normalizeDraftStatus(row.status) === "needs_revision"
   ).length;
-  const submitted = rows.filter((row) => row.status === "submitted").length;
+  const submitted = rows.filter(
+    (row) => normalizeDraftStatus(row.status) === "submitted"
+  ).length;
+  const publicationReady = rows.filter(
+    (row) => normalizeDraftStatus(row.status) === "publication_ready"
+  ).length;
+  const published = rows.filter(
+    (row) => normalizeDraftStatus(row.status) === "published"
+  ).length;
   const latest = rows[0];
 
   if (!source) {
@@ -433,6 +480,16 @@ function renderDrafts(game) {
       <strong>${submitted}</strong>
       <p>Drafts ready for Brad's review.</p>
     </article>
+    <article class="draft-stat">
+      <span>Publication Ready</span>
+      <strong>${publicationReady}</strong>
+      <p>Approved drafts waiting to publish.</p>
+    </article>
+    <article class="draft-stat">
+      <span>Published</span>
+      <strong>${published}</strong>
+      <p>Drafts marked as live inventory.</p>
+    </article>
     <article class="draft-stat wide">
       <span>Latest Activity</span>
       <strong>${latest ? escapeHtml(formatDateTime(latest.updated_at)) : "None yet"}</strong>
@@ -454,16 +511,7 @@ function renderDrafts(game) {
       const status = normalizeDraftStatus(row.status);
       const rowKey = draftRowKey(game.id, row.draft_id);
       const updating = draftStatusUpdatingKey === rowKey;
-      const primaryAction =
-        status === "submitted"
-          ? {
-              label: "Send Back",
-              nextStatus: "needs_revision"
-            }
-          : {
-              label: "Move to Final Review",
-              nextStatus: "submitted"
-            };
+      const primaryAction = nextDraftAction(status);
       return `
         <article class="draft-row ${escapeHtml(draftStatusClass(status))}">
           <div>
@@ -477,16 +525,34 @@ function renderDrafts(game) {
           </div>
           <div class="draft-row-actions">
             <a class="draft-link" href="${escapeHtml(editorUrl)}" target="_blank" rel="noreferrer">Open Editor</a>
-            <button
-              class="draft-state-button"
-              type="button"
-              data-game-id="${escapeHtml(game.id)}"
-              data-draft-id="${escapeHtml(row.draft_id)}"
-              data-next-status="${escapeHtml(primaryAction.nextStatus)}"
-              ${updating ? "disabled" : ""}
-            >
-              ${updating ? "Updating..." : escapeHtml(primaryAction.label)}
-            </button>
+            ${
+              primaryAction
+                ? `<button
+                    class="draft-state-button"
+                    type="button"
+                    data-game-id="${escapeHtml(game.id)}"
+                    data-draft-id="${escapeHtml(row.draft_id)}"
+                    data-next-status="${escapeHtml(primaryAction.nextStatus)}"
+                    ${updating ? "disabled" : ""}
+                  >
+                    ${updating ? "Updating..." : escapeHtml(primaryAction.label)}
+                  </button>`
+                : ""
+            }
+            ${
+              status === "submitted"
+                ? `<button
+                    class="draft-state-button secondary"
+                    type="button"
+                    data-game-id="${escapeHtml(game.id)}"
+                    data-draft-id="${escapeHtml(row.draft_id)}"
+                    data-next-status="needs_revision"
+                    ${updating ? "disabled" : ""}
+                  >
+                    Send Back
+                  </button>`
+                : ""
+            }
           </div>
         </article>
       `;
