@@ -8,7 +8,7 @@ A first shared hub for Word Architect, Top Tier, and Your Story.
 - Brand cards using each game's logo
 - Analytics placeholders for the future Supabase bridge
 - Supabase-ready analytics reader for shared game stats
-- Supabase schema for Top Tier editor draft saving
+- Supabase schema for Top Tier and Word Architect editor draft saving
 - Readiness board per game
 - Direct links to editor/writer portals and live games
 
@@ -19,7 +19,7 @@ A first shared hub for Word Architect, Top Tier, and Your Story.
 3. Add the project URL and public anon key.
 4. Use the same URL/key in each game's analytics config or environment variables.
 
-The event table stores counts and behavior signals. The draft table stores editor-created Top Tier puzzle drafts. It should not store player-written story text.
+The event table stores counts and behavior signals. The draft tables store editor-created Top Tier and Word Architect puzzle drafts. They should not store player-written story text.
 
 ## Next step
 
