@@ -113,6 +113,10 @@ const draftList = document.querySelector("#draftList");
 const readyList = document.querySelector("#readyList");
 const readyCount = document.querySelector("#readyCount");
 const workflowList = document.querySelector("#workflowList");
+const attentionLead = document.querySelector("#attentionLead");
+const attentionList = document.querySelector("#attentionList");
+const suiteAnalyticsSource = document.querySelector("#suiteAnalyticsSource");
+const suiteMetrics = document.querySelector("#suiteMetrics");
 
 let activeGameId = localStorage.getItem("studioActiveGame") || games[0].id;
 let analyticsRows = [];
@@ -250,8 +254,9 @@ function draftEditorUrl(game, row) {
   const source = draftSources[game.id];
   if (!source) return "";
 
-  if (game.id === "top-tier" && row.week && row.day) {
-    return `${source.editorUrl}&week=${encodeURIComponent(row.week)}&day=${encodeURIComponent(row.day)}`;
+  if ((game.id === "top-tier" || game.id === "word-architect") && row.week && row.day) {
+    const separator = source.editorUrl.includes("?") ? "&" : "?";
+    return `${source.editorUrl}${separator}week=${encodeURIComponent(row.week)}&day=${encodeURIComponent(row.day)}`;
   }
 
   return source.editorUrl;
@@ -286,6 +291,165 @@ function nextDraftAction(status) {
   return null;
 }
 
+function gameForDraft(gameId) {
+  return games.find((game) => game.id === gameId);
+}
+
+function attentionPriority(status) {
+  const priorities = {
+    needs_revision: 1,
+    submitted: 2,
+    publication_ready: 3,
+    draft: 4
+  };
+
+  return priorities[status] || 9;
+}
+
+function attentionDetail(status) {
+  if (status === "needs_revision") {
+    return "Needs another editing pass before it comes back to review.";
+  }
+
+  if (status === "submitted") {
+    return "Ready for Brad's review.";
+  }
+
+  if (status === "publication_ready") {
+    return "Approved and waiting to be marked as live inventory.";
+  }
+
+  return "Saved branch is still being shaped.";
+}
+
+function attentionItems() {
+  return Object.entries(draftRowsByGame)
+    .flatMap(([gameId, rows]) => {
+      const game = gameForDraft(gameId);
+      if (!game) return [];
+
+      return (rows || []).map((row) => ({
+        game,
+        row,
+        status: normalizeDraftStatus(row.status)
+      }));
+    })
+    .filter((item) => item.status !== "published" && item.status !== "approved")
+    .sort((a, b) => {
+      const priorityDelta = attentionPriority(a.status) - attentionPriority(b.status);
+      if (priorityDelta) return priorityDelta;
+
+      return new Date(b.row.updated_at || 0) - new Date(a.row.updated_at || 0);
+    })
+    .slice(0, 6);
+}
+
+function renderAttention() {
+  if (!attentionList || !attentionLead) return;
+
+  const config = draftConfig();
+  if (!config) {
+    attentionLead.textContent = "Connect Supabase drafts to turn this into a live daily checklist.";
+    attentionList.innerHTML = `
+      <article class="attention-empty">
+        Add the studio Supabase URL and anon key, then this board will show draft review, correction, and publication work.
+      </article>
+    `;
+    return;
+  }
+
+  if (!draftsConfigured) {
+    attentionLead.textContent = "Checking the live draft workflow.";
+    attentionList.innerHTML = `
+      <article class="attention-empty">
+        Loading the latest draft branches from the editor portals.
+      </article>
+    `;
+    return;
+  }
+
+  const items = attentionItems();
+
+  if (!items.length) {
+    attentionLead.textContent = "All clear. Nothing is waiting for review, correction, or publication.";
+    attentionList.innerHTML = `
+      <article class="attention-empty attention-empty-clear">
+        The suite has no draft branches needing action right now.
+      </article>
+    `;
+    return;
+  }
+
+  attentionLead.textContent = `${items.length} item${items.length === 1 ? "" : "s"} waiting across the suite.`;
+  attentionList.innerHTML = items
+    .map(({ game, row, status }) => {
+      const action = nextDraftAction(status);
+      const editorUrl = draftEditorUrl(game, row);
+      const rowKey = draftRowKey(game.id, row.draft_id);
+      const isUpdating = draftStatusUpdatingKey === rowKey;
+      const updatedAt = row.updated_at ? `Updated ${formatDateTime(row.updated_at)}` : "No save time yet";
+      const editorLine = draftEditorLine(row);
+
+      return `
+        <article class="attention-card ${draftStatusClass(status)}">
+          <div class="attention-card-top">
+            <span class="attention-game">${escapeHtml(game.name)}</span>
+            <span class="draft-state-pill ${draftStatusClass(status)}">${escapeHtml(draftStatusLabel(status))}</span>
+          </div>
+          <strong>${escapeHtml(draftTitle(row))}</strong>
+          <p>${escapeHtml(attentionDetail(status))}</p>
+          <span class="attention-meta">${escapeHtml(updatedAt)} | ${escapeHtml(editorLine)}</span>
+          <div class="attention-actions">
+            ${editorUrl ? `<a class="attention-link" href="${escapeHtml(editorUrl)}">Open Editor</a>` : ""}
+            ${
+              action
+                ? `
+                  <button
+                    class="attention-state-button"
+                    type="button"
+                    data-game-id="${escapeHtml(game.id)}"
+                    data-draft-id="${escapeHtml(row.draft_id)}"
+                    data-next-status="${escapeHtml(action.nextStatus)}"
+                    ${isUpdating ? "disabled" : ""}
+                  >
+                    ${isUpdating ? "Saving..." : escapeHtml(action.label)}
+                  </button>
+                `
+                : ""
+            }
+            ${
+              status === "submitted"
+                ? `
+                  <button
+                    class="attention-state-button secondary"
+                    type="button"
+                    data-game-id="${escapeHtml(game.id)}"
+                    data-draft-id="${escapeHtml(row.draft_id)}"
+                    data-next-status="needs_revision"
+                    ${isUpdating ? "disabled" : ""}
+                  >
+                    Send Back
+                  </button>
+                `
+                : ""
+            }
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  attentionList.querySelectorAll(".attention-state-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateDraftStatus(
+        button.dataset.gameId,
+        button.dataset.draftId,
+        button.dataset.nextStatus
+      );
+    });
+  });
+}
+
 function rowsFor(gameId, eventName) {
   return analyticsRows.filter(
     (row) => row.game_id === gameId && (!eventName || row.event_name === eventName)
@@ -316,6 +480,108 @@ function averageSeconds(gameId, eventName) {
 function percent(part, total) {
   if (!total) return "0%";
   return `${Math.round((part / total) * 100)}%`;
+}
+
+function allDraftRows() {
+  return Object.entries(draftRowsByGame).flatMap(([gameId, rows]) =>
+    (rows || []).map((row) => ({ ...row, game_id: gameId }))
+  );
+}
+
+function draftCountForStatuses(statuses) {
+  const normalizedStatuses = new Set(statuses.map(normalizeDraftStatus));
+  return allDraftRows().filter((row) => normalizedStatuses.has(normalizeDraftStatus(row.status))).length;
+}
+
+function suiteTotalEvents() {
+  return analyticsRows.reduce((total, row) => total + Number(row.total_count || 0), 0);
+}
+
+function suiteEventTotal(needles) {
+  return analyticsRows
+    .filter((row) => {
+      const eventName = String(row.event_name || "").toLowerCase();
+      return needles.some((needle) => eventName.includes(needle));
+    })
+    .reduce((total, row) => total + Number(row.total_count || 0), 0);
+}
+
+function suiteMetricData() {
+  const portalCount = games.reduce(
+    (total, game) => total + game.links.filter((link) => /editor|writer|portal/i.test(link.label)).length,
+    0
+  );
+  const attentionCount = draftsConfigured ? attentionItems().length : null;
+  const reviewCount = draftsConfigured ? draftCountForStatuses(["submitted", "publication_ready"]) : null;
+  const eventCount = analyticsConfigured ? suiteTotalEvents() : null;
+  const storyMagicCount = analyticsConfigured ? suiteEventTotal(["world", "reel", "video", "poster"]) : null;
+
+  return [
+    {
+      label: "Games live",
+      value: games.length,
+      note: "Public front door points players to the active game experiences."
+    },
+    {
+      label: "Studio portals",
+      value: portalCount,
+      note: "Backstage links open the editors, writer portal, and command workflows."
+    },
+    {
+      label: "Events tracked",
+      value: eventCount ?? "--",
+      note: analyticsConfigured
+        ? "Recent Supabase events are flowing into the Command Center."
+        : "Connect analytics to light this up with live player activity."
+    },
+    {
+      label: "Needs attention",
+      value: attentionCount ?? "--",
+      note: draftsConfigured
+        ? "Drafts waiting for review, corrections, or publishing."
+        : "Connect draft data to show today's editorial queue."
+    },
+    {
+      label: "Review queue",
+      value: reviewCount ?? "--",
+      note: draftsConfigured
+        ? "Final review and publication-ready drafts waiting on a decision."
+        : "Draft workflow data has not been loaded yet."
+    },
+    {
+      label: "Story magic",
+      value: storyMagicCount ?? "--",
+      note: analyticsConfigured
+        ? "Your Story reel, poster, world, and video events in the current window."
+        : "Your Story magic events will show here once analytics are connected."
+    }
+  ];
+}
+
+function renderSuiteAnalytics() {
+  if (!suiteMetrics || !suiteAnalyticsSource) return;
+
+  if (analyticsConfigured && draftsConfigured) {
+    suiteAnalyticsSource.textContent = "Live events and drafts connected";
+  } else if (analyticsConfigured) {
+    suiteAnalyticsSource.textContent = "Live analytics connected";
+  } else if (draftsConfigured) {
+    suiteAnalyticsSource.textContent = "Live drafts connected";
+  } else {
+    suiteAnalyticsSource.textContent = "Waiting for live data";
+  }
+
+  suiteMetrics.innerHTML = suiteMetricData()
+    .map(
+      (metric) => `
+        <article class="suite-metric">
+          <span>${escapeHtml(metric.label)}</span>
+          <strong>${escapeHtml(metric.value)}</strong>
+          <p>${escapeHtml(metric.note)}</p>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function liveMetric(game, metric) {
@@ -672,6 +938,8 @@ function renderDetail() {
   renderDrafts(game);
   renderReadyBoard(game);
   renderWorkflow(game);
+  renderAttention();
+  renderSuiteAnalytics();
 }
 
 function renderPortal() {

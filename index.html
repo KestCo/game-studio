@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>KestCo Game Studio</title>
+    <title>The Game Studio</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="studio-shell">
       <header class="studio-header">
         <div>
-          <p class="eyebrow">KestCo Game Studio</p>
+          <p class="eyebrow">THE GAME STUDIO</p>
           <h1>Game command center</h1>
         </div>
         <div class="studio-status">
@@ -36,6 +36,81 @@
           <span>Drafts</span>
           <strong>Shared saves active</strong>
         </article>
+      </section>
+
+      <section class="attention-panel" aria-labelledby="attentionTitle">
+        <div class="attention-copy">
+          <span class="eyebrow">Today</span>
+          <h2 id="attentionTitle">What needs my attention today?</h2>
+          <p id="attentionLead">Checking the live draft workflow.</p>
+        </div>
+        <div id="attentionList" class="attention-list" aria-live="polite"></div>
+      </section>
+
+      <section class="suite-board" aria-label="Suite analytics and connection map">
+        <section class="panel suite-analytics-panel" aria-labelledby="suiteAnalyticsTitle">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Suite Analytics</span>
+              <h2 id="suiteAnalyticsTitle">Suite pulse</h2>
+            </div>
+            <span id="suiteAnalyticsSource" class="data-source">Checking live events</span>
+          </div>
+          <div id="suiteMetrics" class="suite-metrics" aria-live="polite"></div>
+        </section>
+
+        <section class="panel connection-map-panel" aria-labelledby="connectionMapTitle">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Connection Map</span>
+              <h2 id="connectionMapTitle">Front door to backstage</h2>
+            </div>
+            <span class="data-source">Audience and studio flow</span>
+          </div>
+
+          <div class="connection-map">
+            <div class="connection-lane">
+              <strong>Player side</strong>
+              <div class="connection-steps" aria-label="Player flow">
+                <article class="connection-step audience">
+                  <span>Front Door</span>
+                  <p>Players choose a game from the public suite.</p>
+                </article>
+                <article class="connection-step audience">
+                  <span>Daily Games</span>
+                  <p>Word Architect, Top Tier, and Your Story run as the live experiences.</p>
+                </article>
+                <article class="connection-step audience">
+                  <span>Results and Reels</span>
+                  <p>Players finish, learn, replay, and share the moments that land.</p>
+                </article>
+              </div>
+            </div>
+
+            <div class="connection-foundation">
+              <span>Shared Data Layer</span>
+              <p>Supabase connects draft workflow, analytics events, review status, and published inventory.</p>
+            </div>
+
+            <div class="connection-lane">
+              <strong>Studio side</strong>
+              <div class="connection-steps" aria-label="Studio flow">
+                <article class="connection-step studio">
+                  <span>Command Center</span>
+                  <p>Brad sees what needs attention across the full suite.</p>
+                </article>
+                <article class="connection-step studio">
+                  <span>Editor and Writer Portals</span>
+                  <p>Editors and writers shape drafts inside each game workspace.</p>
+                </article>
+                <article class="connection-step studio">
+                  <span>Review to Publish</span>
+                  <p>Drafts move from edited version to final review, publication ready, and live inventory.</p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="studio-grid">
