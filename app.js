@@ -117,6 +117,11 @@ const attentionLead = document.querySelector("#attentionLead");
 const attentionList = document.querySelector("#attentionList");
 const suiteAnalyticsSource = document.querySelector("#suiteAnalyticsSource");
 const suiteMetrics = document.querySelector("#suiteMetrics");
+const openViewButtons = document.querySelectorAll("[data-open-view]");
+const closeViewButtons = document.querySelectorAll("[data-close-view]");
+const studioViews = document.querySelectorAll(".studio-view");
+const clearUnchangedBranchesButton = document.querySelector("#clearUnchangedBranches");
+const branchCleanupStatus = document.querySelector("#branchCleanupStatus");
 
 let activeGameId = localStorage.getItem("studioActiveGame") || games[0].id;
 let analyticsRows = [];
@@ -127,6 +132,16 @@ let draftRowsByGame = {
 };
 let draftsConfigured = false;
 let draftStatusUpdatingKey = "";
+let hiddenDraftBranchKeys = new Set();
+let branchCleanupMessage = "";
+
+try {
+  hiddenDraftBranchKeys = new Set(
+    JSON.parse(localStorage.getItem("studioHiddenDraftBranches") || "[]")
+  );
+} catch (_error) {
+  hiddenDraftBranchKeys = new Set();
+}
 
 const draftSources = {
   "word-architect": {
@@ -266,6 +281,52 @@ function draftRowKey(gameId, draftId) {
   return `${gameId}:${draftId}`;
 }
 
+function textValue(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function hasEditorSignal(row = {}) {
+  return Boolean(
+    textValue(row.editor_name) ||
+      textValue(row.news_organization) ||
+      textValue(row.publication) ||
+      textValue(row.submitted_at)
+  );
+}
+
+function isHiddenDraftBranch(gameId, row = {}) {
+  return (
+    hiddenDraftBranchKeys.has(draftRowKey(gameId, row.draft_id)) &&
+    normalizeDraftStatus(row.status) === "draft" &&
+    !hasEditorSignal(row)
+  );
+}
+
+function activeDraftRows(gameId, rows = []) {
+  return (rows || []).filter((row) => row && !isHiddenDraftBranch(gameId, row));
+}
+
+function clearableDraftBranches() {
+  return Object.entries(draftRowsByGame).flatMap(([gameId, rows]) =>
+    activeDraftRows(gameId, rows)
+      .filter(
+        (row) =>
+          normalizeDraftStatus(row.status) === "draft" &&
+          row.draft_id &&
+          !hasEditorSignal(row)
+      )
+      .map((row) => ({ gameId, row }))
+  );
+}
+
+function saveHiddenDraftBranches() {
+  try {
+    localStorage.setItem("studioHiddenDraftBranches", JSON.stringify([...hiddenDraftBranchKeys]));
+  } catch (_error) {
+    // This cleanup is only a local view preference.
+  }
+}
+
 function nextDraftAction(status) {
   if (status === "draft" || status === "needs_revision") {
     return {
@@ -328,7 +389,7 @@ function attentionItems() {
       const game = gameForDraft(gameId);
       if (!game) return [];
 
-      return (rows || []).map((row) => ({
+      return activeDraftRows(gameId, rows).map((row) => ({
         game,
         row,
         status: normalizeDraftStatus(row.status)
@@ -484,7 +545,7 @@ function percent(part, total) {
 
 function allDraftRows() {
   return Object.entries(draftRowsByGame).flatMap(([gameId, rows]) =>
-    (rows || []).map((row) => ({ ...row, game_id: gameId }))
+    activeDraftRows(gameId, rows).map((row) => ({ ...row, game_id: gameId }))
   );
 }
 
@@ -696,7 +757,7 @@ function renderMetrics(game) {
 
 function renderDrafts(game) {
   const source = draftSources[game.id];
-  const rows = [...(draftRowsByGame[game.id] || [])].sort(
+  const rows = [...activeDraftRows(game.id, draftRowsByGame[game.id] || [])].sort(
     (a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0)
   );
   const edited = rows.filter((row) => normalizeDraftStatus(row.status) === "draft").length;
@@ -940,6 +1001,7 @@ function renderDetail() {
   renderWorkflow(game);
   renderAttention();
   renderSuiteAnalytics();
+  renderBranchCleanupStatus();
 }
 
 function renderPortal() {
@@ -947,6 +1009,94 @@ function renderPortal() {
   renderDetail();
 }
 
+function renderBranchCleanupStatus() {
+  if (!branchCleanupStatus || !clearUnchangedBranchesButton) return;
+
+  const clearable = clearableDraftBranches();
+  clearUnchangedBranchesButton.disabled = !clearable.length;
+  branchCleanupStatus.textContent =
+    branchCleanupMessage ||
+    (clearable.length
+      ? `${clearable.length} unchanged test ${clearable.length === 1 ? "branch" : "branches"} can be hidden.`
+      : "No unchanged test branches need cleanup.");
+}
+
+function clearUnchangedBranches() {
+  const clearable = clearableDraftBranches();
+
+  if (!clearable.length) {
+    branchCleanupMessage = "No unchanged test branches need cleanup.";
+    renderBranchCleanupStatus();
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Hide ${clearable.length} unchanged test ${
+      clearable.length === 1 ? "branch" : "branches"
+    } from this Command Center view? This keeps live database rows untouched.`
+  );
+
+  if (!confirmed) return;
+
+  clearable.forEach(({ gameId, row }) => {
+    hiddenDraftBranchKeys.add(draftRowKey(gameId, row.draft_id));
+  });
+
+  saveHiddenDraftBranches();
+  branchCleanupMessage = `Cleared ${clearable.length} unchanged test ${
+    clearable.length === 1 ? "branch" : "branches"
+  } from this view.`;
+  renderPortal();
+}
+
+function closeStudioViews() {
+  studioViews.forEach((view) => {
+    view.classList.remove("is-open");
+    view.setAttribute("aria-hidden", "true");
+  });
+  document.body.classList.remove("view-open");
+}
+
+function openStudioView(viewId) {
+  const view = document.getElementById(viewId);
+  if (!view) return;
+
+  closeStudioViews();
+  view.classList.add("is-open");
+  view.setAttribute("aria-hidden", "false");
+  document.body.classList.add("view-open");
+  const closeButton = view.querySelector("[data-close-view]");
+  if (closeButton) closeButton.focus();
+}
+
+function setupStudioViews() {
+  openViewButtons.forEach((button) => {
+    button.addEventListener("click", () => openStudioView(button.dataset.openView));
+  });
+
+  closeViewButtons.forEach((button) => {
+    button.addEventListener("click", closeStudioViews);
+  });
+
+  studioViews.forEach((view) => {
+    view.addEventListener("click", (event) => {
+      if (event.target === view) closeStudioViews();
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeStudioViews();
+  });
+}
+
+function setupBranchCleanup() {
+  if (clearUnchangedBranchesButton) {
+    clearUnchangedBranchesButton.addEventListener("click", clearUnchangedBranches);
+  }
+}
+
+setupStudioViews();
+setupBranchCleanup();
 renderPortal();
 
 async function loadAnalyticsRows() {

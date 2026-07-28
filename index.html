@@ -47,70 +47,28 @@
         <div id="attentionList" class="attention-list" aria-live="polite"></div>
       </section>
 
-      <section class="suite-board" aria-label="Suite analytics and connection map">
-        <section class="panel suite-analytics-panel" aria-labelledby="suiteAnalyticsTitle">
-          <div class="panel-heading">
-            <div>
-              <span class="eyebrow">Suite Analytics</span>
-              <h2 id="suiteAnalyticsTitle">Suite pulse</h2>
-            </div>
-            <span id="suiteAnalyticsSource" class="data-source">Checking live events</span>
-          </div>
-          <div id="suiteMetrics" class="suite-metrics" aria-live="polite"></div>
-        </section>
+      <section class="suite-actions" aria-label="Studio tools">
+        <article class="panel suite-action-card">
+          <span class="eyebrow">Suite Analytics</span>
+          <h2>Analytics</h2>
+          <p>Open a focused view of live events, today's play, editor activity, and Your Story magic.</p>
+          <button class="suite-action-button" type="button" data-open-view="analyticsView">Open Analytics</button>
+        </article>
 
-        <section class="panel connection-map-panel" aria-labelledby="connectionMapTitle">
-          <div class="panel-heading">
-            <div>
-              <span class="eyebrow">Connection Map</span>
-              <h2 id="connectionMapTitle">Front door to backstage</h2>
-            </div>
-            <span class="data-source">Audience and studio flow</span>
-          </div>
+        <article class="panel suite-action-card">
+          <span class="eyebrow">Connection Map</span>
+          <h2>System Map</h2>
+          <p>See how the front door, games, Command Center, editors, writers, analytics, and future platforms connect.</p>
+          <button class="suite-action-button" type="button" data-open-view="connectionView">Open Map</button>
+        </article>
 
-          <div class="connection-map">
-            <div class="connection-lane">
-              <strong>Player side</strong>
-              <div class="connection-steps" aria-label="Player flow">
-                <article class="connection-step audience">
-                  <span>Front Door</span>
-                  <p>Players choose a game from the public suite.</p>
-                </article>
-                <article class="connection-step audience">
-                  <span>Daily Games</span>
-                  <p>Word Architect, Top Tier, and Your Story run as the live experiences.</p>
-                </article>
-                <article class="connection-step audience">
-                  <span>Results and Reels</span>
-                  <p>Players finish, learn, replay, and share the moments that land.</p>
-                </article>
-              </div>
-            </div>
-
-            <div class="connection-foundation">
-              <span>Shared Data Layer</span>
-              <p>Supabase connects draft workflow, analytics events, review status, and published inventory.</p>
-            </div>
-
-            <div class="connection-lane">
-              <strong>Studio side</strong>
-              <div class="connection-steps" aria-label="Studio flow">
-                <article class="connection-step studio">
-                  <span>Command Center</span>
-                  <p>Brad sees what needs attention across the full suite.</p>
-                </article>
-                <article class="connection-step studio">
-                  <span>Editor and Writer Portals</span>
-                  <p>Editors and writers shape drafts inside each game workspace.</p>
-                </article>
-                <article class="connection-step studio">
-                  <span>Review to Publish</span>
-                  <p>Drafts move from edited version to final review, publication ready, and live inventory.</p>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
+        <article class="panel suite-action-card branch-cleanup-card">
+          <span class="eyebrow">Draft Branches</span>
+          <h2>Clean Test Branches</h2>
+          <p>Hide unchanged test branches from this studio view while preserving review, revision, publication, and published work.</p>
+          <button id="clearUnchangedBranches" class="suite-action-button secondary" type="button">Clear Unchanged Branches</button>
+          <span id="branchCleanupStatus" class="branch-cleanup-status" aria-live="polite"></span>
+        </article>
       </section>
 
       <section class="studio-grid">
@@ -182,6 +140,100 @@
             <div id="workflowList" class="workflow-list"></div>
           </section>
         </section>
+      </section>
+
+      <section id="analyticsView" class="studio-view" aria-hidden="true" aria-labelledby="suiteAnalyticsTitle">
+        <div class="studio-view-shell">
+          <div class="view-topbar">
+            <div>
+              <span class="eyebrow">Suite Analytics</span>
+              <h2 id="suiteAnalyticsTitle">Analytics</h2>
+              <p>Live signals for play, workflow, and the moments that need attention.</p>
+            </div>
+            <button class="view-close" type="button" data-close-view>Close</button>
+          </div>
+          <span id="suiteAnalyticsSource" class="data-source">Checking live events</span>
+          <div id="suiteMetrics" class="suite-metrics suite-metrics-full" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="connectionView" class="studio-view" aria-hidden="true" aria-labelledby="connectionMapTitle">
+        <div class="studio-view-shell connection-view-shell">
+          <div class="view-topbar">
+            <div>
+              <span class="eyebrow">Connection Map</span>
+              <h2 id="connectionMapTitle">Front Door And Back Door</h2>
+              <p>A working map of how players, games, editors, writers, analytics, and future platforms connect.</p>
+            </div>
+            <button class="view-close" type="button" data-close-view>Close</button>
+          </div>
+
+          <div class="system-map" aria-label="Game Suite system map">
+            <svg class="system-map-lines" viewBox="0 0 1200 680" role="img" aria-labelledby="systemMapSvgTitle">
+              <title id="systemMapSvgTitle">Connection map from audience to games and studio operations</title>
+              <defs>
+                <marker id="mapArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                </marker>
+              </defs>
+              <path class="map-line audience-line" d="M 105 120 C 260 120 320 220 460 300"></path>
+              <path class="map-line audience-line" d="M 460 300 C 610 235 720 210 870 230"></path>
+              <path class="map-line audience-line" d="M 460 300 C 620 315 705 330 865 330"></path>
+              <path class="map-line audience-line" d="M 460 300 C 610 395 725 435 875 455"></path>
+              <path class="map-line studio-line" d="M 1040 565 C 900 550 780 500 650 425"></path>
+              <path class="map-line studio-line" d="M 650 425 C 505 455 365 525 210 555"></path>
+              <path class="map-line studio-line" d="M 650 425 C 585 525 475 595 360 625"></path>
+              <path class="map-line studio-line" d="M 650 425 C 750 540 870 610 1015 625"></path>
+              <path class="map-line data-line" d="M 650 425 C 685 340 685 270 650 205"></path>
+              <path class="map-line future-line" d="M 650 205 C 760 145 885 110 1045 105"></path>
+            </svg>
+
+            <div class="map-node audience-node" style="--x: 8%; --y: 16%;">
+              <span>Audience</span>
+              <p>Players enter the public side.</p>
+            </div>
+            <div class="map-node hub-node" style="--x: 39%; --y: 42%;">
+              <span>Game Suite</span>
+              <p>Front door for daily games.</p>
+            </div>
+            <div class="map-node game-node" style="--x: 72%; --y: 24%;">
+              <span>Word Architect</span>
+              <p>Language and Word Lens.</p>
+            </div>
+            <div class="map-node game-node" style="--x: 72%; --y: 39%;">
+              <span>Top Tier</span>
+              <p>Timed brain teasers.</p>
+            </div>
+            <div class="map-node game-node" style="--x: 72%; --y: 58%;">
+              <span>Your Story</span>
+              <p>Words become worlds.</p>
+            </div>
+            <div class="map-node studio-hub-node" style="--x: 54%; --y: 57%;">
+              <span>Command Center</span>
+              <p>Back door for operations.</p>
+            </div>
+            <div class="map-node studio-node" style="--x: 15%; --y: 74%;">
+              <span>WA Editor</span>
+              <p>Word Architect workflow.</p>
+            </div>
+            <div class="map-node studio-node" style="--x: 28%; --y: 84%;">
+              <span>TT Editor</span>
+              <p>Top Tier workflow.</p>
+            </div>
+            <div class="map-node studio-node" style="--x: 83%; --y: 84%;">
+              <span>YS Writer</span>
+              <p>Your Story workflow.</p>
+            </div>
+            <div class="map-node analytics-node" style="--x: 54%; --y: 24%;">
+              <span>Analytics</span>
+              <p>Live events and drafts.</p>
+            </div>
+            <div class="map-node future-node" style="--x: 86%; --y: 14%;">
+              <span>Future Platforms</span>
+              <p>Web, newsletters, partners.</p>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
