@@ -69,7 +69,7 @@ const games = [
     id: "your-story",
     name: "Your Story",
     logo: "assets/your-story-logo.png",
-    status: "Live writer ready",
+    status: "Publishing workflow ready",
     statusTone: "ready",
     summary:
       "An ad-lib story experience where player words become a cinematic world, with a writer portal and AI poster bridge.",
@@ -87,14 +87,17 @@ const games = [
     ],
     readiness: [
       { label: "Writer portal mapped", detail: "?writer=1 opens the story writer.", ready: true },
+      { label: "Shared draft saving", detail: "Protected story drafts sync through Supabase.", ready: true },
+      { label: "Review and approval", detail: "Command Center can approve or return submitted stories.", ready: true },
+      { label: "Versioned publishing", detail: "Approved stories publish with revision history and rollback.", ready: true },
       { label: "AI bridge deployed", detail: "/api/create-world is live.", ready: true },
       { label: "OpenAI key", detail: "Add OPENAI_API_KEY in Vercel for real posters.", ready: false },
       { label: "Analytics events", detail: "Needs Supabase event capture.", ready: false }
     ],
     workflow: [
       "Draft the story frame in the writer portal.",
-      "Playtest the blanks and generated movie prompt.",
-      "Add the OpenAI key, then watch poster generation health."
+      "Playtest, save, and submit the shared draft for review.",
+      "Approve it here, then publish or roll back from the writer portal."
     ]
   }
 ];
@@ -128,7 +131,8 @@ let analyticsRows = [];
 let analyticsConfigured = false;
 let draftRowsByGame = {
   "word-architect": [],
-  "top-tier": []
+  "top-tier": [],
+  "your-story": []
 };
 let draftsConfigured = false;
 let draftStatusUpdatingKey = "";
@@ -153,6 +157,11 @@ const draftSources = {
     table: "top_tier_drafts",
     select: "draft_id,source_game_id,week,day,label,status,editor_name,news_organization,updated_at,submitted_at",
     editorUrl: "https://top-tier-game.vercel.app/?editor=1"
+  },
+  "your-story": {
+    table: "your_story_drafts",
+    select: "draft_id,source_template_id,source_game_id,story_number,week,day,title,status,editor_name,revision,updated_at,submitted_at,published_at",
+    editorUrl: "https://your-story-zeta.vercel.app/?writer=1"
   }
 };
 
@@ -269,7 +278,7 @@ function draftEditorUrl(game, row) {
   const source = draftSources[game.id];
   if (!source) return "";
 
-  if ((game.id === "top-tier" || game.id === "word-architect") && row.week && row.day) {
+  if ((game.id === "top-tier" || game.id === "word-architect" || game.id === "your-story") && row.week && row.day) {
     const separator = source.editorUrl.includes("?") ? "&" : "?";
     return `${source.editorUrl}${separator}week=${encodeURIComponent(row.week)}&day=${encodeURIComponent(row.day)}`;
   }
@@ -327,7 +336,7 @@ function saveHiddenDraftBranches() {
   }
 }
 
-function nextDraftAction(status) {
+function nextDraftAction(status, gameId) {
   if (status === "draft" || status === "needs_revision") {
     return {
       label: "Move to Final Review",
@@ -342,7 +351,7 @@ function nextDraftAction(status) {
     };
   }
 
-  if (status === "publication_ready") {
+  if (status === "publication_ready" && gameId !== "your-story") {
     return {
       label: "Mark Published",
       nextStatus: "published"
@@ -838,7 +847,7 @@ function renderDrafts(game) {
       const status = normalizeDraftStatus(row.status);
       const rowKey = draftRowKey(game.id, row.draft_id);
       const updating = draftStatusUpdatingKey === rowKey;
-      const primaryAction = nextDraftAction(status);
+      const primaryAction = nextDraftAction(status, game.id);
       return `
         <article class="draft-row ${escapeHtml(draftStatusClass(status))}">
           <div>
@@ -897,6 +906,33 @@ function renderDrafts(game) {
   });
 }
 
+function yourStoryEditorKey() {
+  const stored = sessionStorage.getItem("yourStoryCommandCenterEditorKey") || "";
+  if (stored) return stored;
+  const supplied = window.prompt("Enter the Your Story editor key to update review status:") || "";
+  if (supplied) sessionStorage.setItem("yourStoryCommandCenterEditorKey", supplied);
+  return supplied;
+}
+
+async function updateYourStoryDraftStatus(draftId, nextStatus) {
+  const key = yourStoryEditorKey();
+  if (!key) throw new Error("The Your Story editor key is required.");
+  const response = await fetch("https://your-story-zeta.vercel.app/api/story-status", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Editor-Key": key
+    },
+    body: JSON.stringify({ draftId, status: nextStatus })
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.ok === false) {
+    if (response.status === 401) sessionStorage.removeItem("yourStoryCommandCenterEditorKey");
+    throw new Error(body.message || `Draft status update failed with ${response.status}`);
+  }
+  return body.draft;
+}
+
 async function updateDraftStatus(gameId, draftId, nextStatus) {
   const config = draftConfig();
   const source = draftSources[gameId];
@@ -917,6 +953,14 @@ async function updateDraftStatus(gameId, draftId, nextStatus) {
   }
 
   try {
+    if (gameId === "your-story") {
+      const updatedRow = await updateYourStoryDraftStatus(draftId, nextStatus);
+      draftRowsByGame[gameId] = (draftRowsByGame[gameId] || []).map((row) =>
+        row.draft_id === draftId ? { ...row, ...updatedRow } : row
+      );
+      return;
+    }
+
     const response = await fetch(
       `${config.supabaseUrl}/rest/v1/${source.table}?draft_id=eq.${encodeURIComponent(draftId)}`,
       {
@@ -945,6 +989,7 @@ async function updateDraftStatus(gameId, draftId, nextStatus) {
     }
   } catch (error) {
     console.warn("Game Studio could not update draft status.", error);
+    window.alert(`Draft status was not changed: ${error.message}`);
   } finally {
     draftStatusUpdatingKey = "";
     renderDetail();

@@ -8,8 +8,9 @@ A first shared hub for Word Architect, Top Tier, and Your Story.
 - Brand cards using each game's logo
 - Analytics placeholders for the future Supabase bridge
 - Supabase-ready analytics reader for shared game stats
-- Supabase schema for Top Tier and Word Architect editor draft saving
-- Live draft status summaries for Top Tier and Word Architect
+- Supabase schema for Top Tier, Word Architect, and Your Story editor draft saving
+- Live draft status summaries for all three games
+- Protected Your Story review approval connected to its versioned publishing API
 - Readiness board per game
 - Direct links to editor/writer portals and live games
 
@@ -20,11 +21,13 @@ A first shared hub for Word Architect, Top Tier, and Your Story.
 3. Add the project URL and public anon key.
 4. Use the same URL/key in each game's analytics config or environment variables.
 
-The event table stores counts and behavior signals. The draft tables store editor-created Top Tier and Word Architect puzzle drafts. They should not store player-written story text.
+The event table stores counts and behavior signals. The draft tables store editor-created puzzle and story-template drafts. They do not store player-written story text.
 
 ## Editorial states
 
 Drafts move from the original puzzle into an edited version, then into final review, publication ready, and published. Game Studio can send a final-review draft back to corrections needed so an editor can revise it and submit it again.
+
+For Your Story, Command Center review changes go through the protected API at `https://your-story-zeta.vercel.app/api/story-status`. The reviewer enters the same `YOUR_STORY_EDITOR_KEY` used by the Writer Portal; it is retained only in session storage. Once approved, the Writer Portal performs the actual versioned publish or rollback.
 
 ## Next step
 
