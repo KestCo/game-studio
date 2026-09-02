@@ -798,6 +798,73 @@ h3 {
   cursor: wait;
 }
 
+.credential-dialog {
+  width: min(480px, calc(100vw - 32px));
+  border: 0;
+  border-radius: 14px;
+  padding: 0;
+  color: var(--ink);
+  box-shadow: 0 24px 80px rgba(17, 28, 43, 0.28);
+}
+
+.credential-dialog::backdrop {
+  background: rgba(17, 28, 43, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.credential-dialog-card {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+}
+
+.credential-dialog-card h2,
+.credential-dialog-card p {
+  margin: 0;
+}
+
+.credential-dialog-card h2 {
+  margin-top: 5px;
+}
+
+.credential-dialog-card p {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.credential-dialog-field {
+  display: grid;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.credential-dialog-field input {
+  min-height: 46px;
+  border: 1px solid #cfd8e5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font: inherit;
+}
+
+.credential-dialog-field input:focus {
+  border-color: var(--gold);
+  outline: 3px solid rgba(215, 175, 99, 0.22);
+}
+
+.credential-dialog-message {
+  min-height: 20px;
+  color: #a34231 !important;
+  font-weight: 750;
+}
+
+.credential-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .metric-card {
   display: grid;
   gap: 7px;

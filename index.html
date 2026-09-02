@@ -237,6 +237,25 @@
       </section>
     </main>
 
+    <dialog id="yourStoryKeyDialog" class="credential-dialog" aria-labelledby="yourStoryKeyTitle">
+      <form id="yourStoryKeyForm" class="credential-dialog-card">
+        <div>
+          <span class="eyebrow">Protected review action</span>
+          <h2 id="yourStoryKeyTitle">Unlock Your Story approval</h2>
+          <p>Enter the same editor key used by the Your Story Writer Portal. It stays in this browser tab for the current session.</p>
+        </div>
+        <label class="credential-dialog-field">
+          <span>Editor key</span>
+          <input id="yourStoryKeyInput" type="password" autocomplete="current-password" required />
+        </label>
+        <p id="yourStoryKeyMessage" class="credential-dialog-message" aria-live="polite"></p>
+        <div class="credential-dialog-actions">
+          <button id="yourStoryKeyCancel" class="draft-state-button secondary" type="button">Cancel</button>
+          <button class="draft-state-button" type="submit">Continue</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="studio-config.js"></script>
     <script src="studio-analytics.js"></script>
     <script src="app.js"></script>

@@ -125,6 +125,11 @@ const closeViewButtons = document.querySelectorAll("[data-close-view]");
 const studioViews = document.querySelectorAll(".studio-view");
 const clearUnchangedBranchesButton = document.querySelector("#clearUnchangedBranches");
 const branchCleanupStatus = document.querySelector("#branchCleanupStatus");
+const yourStoryKeyDialog = document.querySelector("#yourStoryKeyDialog");
+const yourStoryKeyForm = document.querySelector("#yourStoryKeyForm");
+const yourStoryKeyInput = document.querySelector("#yourStoryKeyInput");
+const yourStoryKeyCancel = document.querySelector("#yourStoryKeyCancel");
+const yourStoryKeyMessage = document.querySelector("#yourStoryKeyMessage");
 
 let activeGameId = localStorage.getItem("studioActiveGame") || games[0].id;
 let analyticsRows = [];
@@ -906,16 +911,32 @@ function renderDrafts(game) {
   });
 }
 
+let resolveYourStoryEditorKey = null;
+
+function finishYourStoryKeyRequest(key = "") {
+  if (!resolveYourStoryEditorKey) return;
+  const resolve = resolveYourStoryEditorKey;
+  resolveYourStoryEditorKey = null;
+  if (yourStoryKeyDialog?.open) yourStoryKeyDialog.close();
+  resolve(key);
+}
+
 function yourStoryEditorKey() {
   const stored = sessionStorage.getItem("yourStoryCommandCenterEditorKey") || "";
-  if (stored) return stored;
-  const supplied = window.prompt("Enter the Your Story editor key to update review status:") || "";
-  if (supplied) sessionStorage.setItem("yourStoryCommandCenterEditorKey", supplied);
-  return supplied;
+  if (stored) return Promise.resolve(stored);
+  if (!yourStoryKeyDialog || !yourStoryKeyInput) return Promise.resolve("");
+
+  return new Promise((resolve) => {
+    resolveYourStoryEditorKey = resolve;
+    yourStoryKeyInput.value = "";
+    yourStoryKeyMessage.textContent = "";
+    yourStoryKeyDialog.showModal();
+    requestAnimationFrame(() => yourStoryKeyInput.focus());
+  });
 }
 
 async function updateYourStoryDraftStatus(draftId, nextStatus) {
-  const key = yourStoryEditorKey();
+  const key = await yourStoryEditorKey();
   if (!key) throw new Error("The Your Story editor key is required.");
   const response = await fetch("https://your-story-zeta.vercel.app/api/story-status", {
     method: "PATCH",
@@ -932,6 +953,24 @@ async function updateYourStoryDraftStatus(draftId, nextStatus) {
   }
   return body.draft;
 }
+
+yourStoryKeyForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const key = yourStoryKeyInput.value.trim();
+  if (!key) {
+    yourStoryKeyMessage.textContent = "Enter the editor key to continue.";
+    yourStoryKeyInput.focus();
+    return;
+  }
+  sessionStorage.setItem("yourStoryCommandCenterEditorKey", key);
+  finishYourStoryKeyRequest(key);
+});
+
+yourStoryKeyCancel?.addEventListener("click", () => finishYourStoryKeyRequest());
+yourStoryKeyDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  finishYourStoryKeyRequest();
+});
 
 async function updateDraftStatus(gameId, draftId, nextStatus) {
   const config = draftConfig();
